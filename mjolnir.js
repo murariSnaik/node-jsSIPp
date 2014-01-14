@@ -1,18 +1,17 @@
 'use strict';
-
+var JsSIP = require('jssip-for-node');
 var Socket = require('ws')
   , connections = {};
 
-var configuration = {
-  'ws_servers': 'ws://ws.tryit.jssip.net:10080',
-  'uri': 'sip:alice@example.com',
-  'password': ''
-};
+var cnt;
+var glbInterval;
+var uriIP = 'XX.XX.XX.XX'; // Kindly change this appropriately
+var uriPort = 'XXXX';
+var clHold = 10000;
+var caller;
+var reciever;
 
 
-
-var JsSIP = require('jssip-for-node');
-//
 // Get the session document that is used to generate the data.
 //
 var session = require(process.argv[2]);
@@ -24,106 +23,103 @@ var masked = process.argv[4] === 'true'
   , binary = process.argv[5] === 'true'
   , protocol = +process.argv[3] || 13;
 
+
+
 process.on('message', function message(task) {
-  var now = Date.now();
+  	var now = Date.now();
 
-  //
-  // Write a new message to the socket. The message should have a size of x
-  //
-  if ('write' in task) {
-    Object.keys(connections).forEach(function write(id) {
-      write(connections[id], task, id);
-    });
-  }
+	//console.log(task.url+'  *****   '+task.messages+'  &&&&&&&&  '+task.id+'  ^^^^^^^ '+task.caller+'   %%%%    '+task.callee);
+	caller = task.caller;
+	reciever = task.callee;
+	var configuration = {
+		  'ws_servers': 'ws://'+uriIP+':'+uriPort,
+		  'uri': 'sip:'+caller+'@'+uriIP+':'+uriPort,
+		  'password': ''
+		};
+		
+	var configuration1 = {
+		  'ws_servers': 'ws://'+uriIP+':'+uriPort,
+		  'uri': 'sip:'+reciever+'@'+uriIP+':'+uriPort,
+		  'password': ''
+		};
 
-  //
-  // Shut down every single socket.
-  //
-  if (task.shutdown) {
-    Object.keys(connections).forEach(function shutdown(id) {
-      connections[id].close();
-    });
-  }
+  	//
+  	// Write a new message to the socket. The message should have a size of x
+  	//
+  	if ('write' in task) {
+    		Object.keys(connections).forEach(function write(id) {
+		      write(connections[id], task, id);
+    		});
+  	}
+  
 
-  // End of the line, we are gonna start generating new connections.
-  if (!task.url) return;
+	var coolPhone = new JsSIP.UA(configuration);
+    var coolPhone1 = new JsSIP.UA(configuration1);
 
-  var coolPhone = new JsSIP.UA(configuration);
+	// Register callbacks to desired call events
+	var eventHandlers = {
+	  'progress':   function(e){ console.log('Progress');/* Your code here */ },
+	  'failed':     function(e){ console.log("inside event failed     "+e.data.cause+"   "+e.data.originator+"   "+e.data.message);},
+	  'started':    function(e){
+		//alert ("inside event started ");
+		var rtcSession = e.sender;
+		console.log('Started   '+e.sender+"    "+rtcSession.direction);
+		//alert("      "+rtcSession.direction);		    
+	  },
+	  'ended':      function(e){ console.log('Ended');/* Your code here */ }
+	};
+	
+	var eventHandlers1 = {
+	  'progress':   function(e){ console.log('Progress1');/* Your code here */ },
+	  'failed':     function(e){ console.log("inside event failed1     "+e.data.cause+"   "+e.data.originator+"   "+e.data.message);},
+	  'started':    function(e){
+		//alert ("inside event started1 ");
+		console.log('Started 1  '+e.sender+"   1   "+rtcSession.direction);
+		var rtcSession = e.sender;
+		//alert("   1   "+rtcSession.direction);
+		/*
+		// Attach local stream to selfView
+		if (rtcSession.getLocalStreams().length > 0) {
+		  selfView.src = JsSIP.global.URL.createObjectURL(rtcSession.getLocalStreams()[0]);
+		}
+	
+		// Attach remote stream to remoteView
+		if (rtcSession.getRemoteStreams().length > 0) {
+		  remoteView.src = JsSIP.global.URL.createObjectURL(rtcSession.getRemoteStreams()[0]);
+		}*/
+	  },
+	  'ended':      function(e){ console.log('Ended1');/* Your code here */ }
+	};
+	
+	var options = {
+	  'eventHandlers': eventHandlers,
+	  'mediaConstraints': {'audio': true, 'video': false}
+	};
+	var options1 = {
+	  'eventHandlers': eventHandlers1,
+	  'mediaConstraints': {'audio': true, 'video': false}
+	};
 
-      coolPhone.start();
+	
+	coolPhone.start();
+	coolPhone1.start();
 
-  var socket = new Socket(task.url, {
-    protocolVersion: protocol
-  });
+	process.send({ type: 'open', duration: Date.now() - now, id: task.id });
 
-  socket.on('open', function open() {
-    process.send({ type: 'open', duration: Date.now() - now, id: task.id });
-    write(socket, task, task.id);
+	setTimeout(function(){coolPhone.unregister(options);}, clHold);
+	setTimeout(function(){coolPhone.stop();}, clHold);
+	setTimeout(function(){coolPhone1.unregister(options1);}, clHold);
+	setTimeout(function(){coolPhone1.stop();}, clHold);     
+	setTimeout(function(){process.send({type: 'close', id: task.id,read: 0,send: 0});}, clHold);
 
-    // As the `close` event is fired after the internal `_socket` is cleaned up
-    // we need to do some hacky shit in order to tack the bytes send.
-  });
 
-  socket.on('message', function message(data) {
-    process.send({
-      type: 'message', latency: Date.now() - socket.last,
-      id: task.id
-    });
+	if (task.shutdown) {
+    		Object.keys(connections).forEach(function shutdown(id) {
+      			connections[id].close();
+    		});
+  	}
 
-    // Only write as long as we are allowed to send messages
-    if (--task.messages) {
-      write(socket, task, task.id);
-    } else {
-      socket.close();
-    }
-  });
+  	// End of the line, we are gonna start generating new connections.
+  	if (!task.url) return;
 
-  socket.on('close', function close() {
-    var internal = socket._socket || {};
-
-    process.send({
-      type: 'close', id: task.id,
-      read: internal.bytesRead || 0,
-      send: internal.bytesWritten || 0
-    });
-  });
-
-  socket.on('error', function error(err) {
-    process.send({ type: 'error', message: err.message, id: task.id });
-
-    socket.close();
-    delete connections[task.id];
-  });
-
-  // Adding a new socket to our socket collection.
-  connections[task.id] = socket;
 });
-
-/**
- * Helper function from writing messages to the socket.
- *
- * @param {WebSocket} socket WebSocket connection we should write to
- * @param {Object} task The given task
- * @param {String} id
- * @param {Function} fn The callback
- * @api private
- */
-function write(socket, task, id, fn) {
-  var start = socket.last = Date.now();
-
-  session[binary ? 'binary' : 'utf8'](task.size, function message(err, data) {
-    socket.send(data, {
-      binary: binary,
-      mask: masked
-    }, function sending(err) {
-      if (err) {
-        process.send({ type: 'error', message: err.message });
-
-        socket.close();
-        delete connections[id];
-      }
-
-      if (fn) fn(err);
-    });
-  });
-}
