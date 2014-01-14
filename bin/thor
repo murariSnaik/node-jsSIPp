@@ -130,6 +130,7 @@ Object.keys(cluster.workers).forEach(function each(id) {
 //
 // Metrics collection.
 //
+var inc =0;
 var metrics = new Metrics(cli.amount * cli.args.length);
 
 // Iterate over all the urls so we can target multiple locations at once, which
@@ -150,12 +151,16 @@ async.forEach(cli.args, function forEach(url, done) {
     // need to process.
     ids[id] = 1;
 
+    var temp1 = 225500001+inc;
+    var temp2 = 225520000-inc;
+
     // Process the connections
-    worker.send({ url: url, size: cli.buffer, messages: cli.messages, id: id });
+    worker.send({ url: url, size: cli.buffer, messages: cli.messages, id: id, caller: temp1 , callee: temp2  });
     worker.once('open::'+ id, fn);
 
     // Add the worker back at the end of the round robin queue.
     robin.push(worker);
+    inc++;
   }, cli.concurrent || Infinity);
 
   // When all the events are processed successfully we should call.. back ;P
