@@ -1,0 +1,47 @@
+{
+  "name": "thor",
+  "version": "1.0.0",
+  "description": "Thor is WebSocket benchmark utility",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/observing/thor.git"
+  },
+  "keywords": [
+    "WebSocket",
+    "benchmark",
+    "load"
+  ],
+  "author": {
+    "name": "Arnout Kazemier",
+    "email": "opensource@observe.it"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "commander": "1.1.x",
+    "async": "0.2.x",
+    "tab": "0.1.x",
+    "colors": "0.6.x",
+    "ws": "git://github.com/3rd-Eden/ws.git",
+    "fast-stats": "git://github.com/bluesmoon/node-faststats.git",
+    "sugar": "1.3.8"
+  },
+  "bin": {
+    "thor": "./bin/thor"
+  },
+  "readme": "# Thor\n\nThor is WebSocket benchmarking/load generator. There are a lot of benchmarking\ntools for HTTP servers. You've got ab, siege, wrk and more. But all these tools\nonly work plain ol HTTP and have no support for WebSockets and even if they did\nthey wouldn't be suitable as they would be testing short running HTTP requests\ninstead of long running HTTP requests with a lot of messaging traffic. Thor\nfixes all of this.\n\n### Dependencies\n\nThor requires Node.js to be installed on your system. If you don't have Node.js\ninstalled you can download it from http://nodejs.org or build it from the github\nsource repository: http://github.com/joyent/node.\n\nOnce you have Node.js installed, you can use bundled package manager `npm` to\ninstall this module:\n\n```\nnpm install -g thor\n```\n\nThe `-g` command flag tells `npm` to install the module globally on your system.\n\n### Usage\n\n```\nthor [options] <urls>\n```\n\nThor can hit multiple URL's at once, this is useful if you are testing your\nreverse proxies, load balancers or just simply multiple applications. The url\nthat you supply to `thor` should be written in a WebSocket compatible format\nusing the `ws` or `wss` protocols:\n\n```\nthor --amount 5000 ws://localhost:8080 wss://localhost:8081\n```\n\nThe snippet above will open up `5000` connections against the regular\n`ws://localhost:8080` and also `5000` connections against the *secured*\n`wss://localhost:8081` server. So a total of `10000` connections will be made.\n\nOne thing to keep in mind is that you probably need to bump the amount of file\ndescriptors on your local machine if you start testing WebSockets. Set the\n`ulimit -n` on machine as high as possible. If you do not know how to do this,\nGoogle it.\n\n#### Options\n\n```\n  Usage: thor [options] ws://localhost\n\n  Options:\n\n    -h, --help                      output usage information\n    -A, --amount <connections>      the amount of persistent connections to generate\n    -C, --concurrent <connections>  how many concurrent-connections per second\n    -M, --messages <messages>       messages to be send per connection\n    -P, --protocol <protocol>       WebSocket protocol version\n    -B, --buffer <size>             size of the messages that are send\n    -W, --workers <cpus>            workers to be spawned\n    -G, --generator <file>          custom message generators\n    -M, --masked                    send the messaged with a mask\n    -b, --binary                    send binary messages instead of utf-8\n    -V, --version                   output the version number\n```\n\nSome small notes about the options:\n\n- `--protocol` is the protocol version number. If you want to use the *HyBi drafts\n  07-12* use `8` as argument or if you want to use the *HyBi drafts 13-17*\n  drafts which are the default version use `13`.\n- `--buffer` should be size of the message in bytes.\n- `--workers` as Node.js is single threaded this sets the amount of sub\n  processes to handle all the heavy lifting.\n\n### Custom messages\n\nSome WebSocket servers have their own custom messaging protocol. In order to\nwork with those servers we introduced a concept called `generators` a generator\nis a small JavaScript file that can output `utf8` and `binary` messages. It uses\na really simple generator by default. \n\nCheckout https://github.com/observing/thor/blob/master/generator.js for an\nexample of a generator.\n\n```\nthor --amount 1000 --generator <file.js> ws://localhost:8080\n```\n\n### Example\n\n```\nthor --amount 1000 --messages 100 ws://localhost:8080\n```\n\nThis will hit the WebSocket server that runs on localhost:8080 with 1000\nconnections and sends 100 messages over each established connection. Once `thor`\nis done with smashing your connections it will generate a detailed report:\n\n```\nThor:                                                  version: 1.0.0\n\nGod of Thunder, son of Odin and smasher of WebSockets!\n\nThou shall:\n- Spawn 4 workers.\n- Create all the concurrent/parallel connections.\n- Smash 1000 connections with the mighty Mjölnir.\n\nThe answers you seek shall be yours, once I claim what is mine.\n\nConnecting to ws://localhost:8080\n\n  Opened 100 connections\n  Opened 200 connections\n  Opened 300 connections\n  Opened 400 connections\n  Opened 500 connections\n  Opened 600 connections\n  Opened 700 connections\n  Opened 800 connections\n  Opened 900 connections\n  Opened 1000 connections\n\n\nOnline               15000 milliseconds\nTime taken           31775 milliseconds\nConnected            1000\nDisconnected         0\nFailed               0\nTotal transferred    120.46MB\nTotal received       120.43MB\n\nDurations (ms):\n\n                     min     mean     stddev  median max\nHandshaking          217     5036       4094    3902 14451\nLatency              0       215         104     205 701\n\nPercentile (ms):\n\n                      50%     66%     75%     80%     90%     95%     98%     98%    100%\nHandshaking          3902    6425    8273    9141    11409   12904   13382   13945   14451\nLatency              205     246     266     288     371     413     437     443     701\n```\n\n### License\n\nMIT\n",
+  "readmeFilename": "README.md",
+  "bugs": {
+    "url": "https://github.com/observing/thor/issues"
+  },
+  "homepage": "https://github.com/observing/thor",
+  "_id": "thor@1.0.0",
+  "dist": {
+    "shasum": "a51fcc40e860dd25b41b4b89a375318667dfedcd"
+  },
+  "_from": "thor@",
+  "_resolved": "https://registry.npmjs.org/thor/-/thor-1.0.0.tgz"
+}
